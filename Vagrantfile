@@ -15,8 +15,8 @@ Vagrant.configure(2) do |config|
 
   # The following are a list of boxes that have been tested and known to build
   # successfully.:
-  config.vm.box = "boxcutter/ol72"
-  #config.vm.box = "puppetlabs/centos-7.0-64-nocm"
+  #config.vm.box = "boxcutter/ol72"
+  config.vm.box = "boxcutter/centos72"
   #config.vm.box = "debian/jessie64"
   #config.vm.box = "ubuntu/vivid64"
 
@@ -29,7 +29,7 @@ Vagrant.configure(2) do |config|
   # within the machine from a port on the host machine. In the example below,
   # accessing "localhost:8080" will access port 80 on the guest machine.
   # config.vm.network "forwarded_port", guest: 80, host: 8080
-  config.vm.network "forwarded_port", guest: 22, host: 50022
+  # config.vm.network "forwarded_port", guest: 22, host: 50022
   config.vm.network "forwarded_port", guest: 80, host: 50080
   config.vm.network "forwarded_port", guest: 1521, host: 50521
 
@@ -85,27 +85,5 @@ Vagrant.configure(2) do |config|
   #   sudo apt-get update
   #   sudo apt-get install -y apache2
   # SHELL
-  config.vm.provision "shell", inline: <<-SHELL
-    export OOS_DEPLOY_TYPE="VAGRANT"
-
-    if [ -n "$(command -v yum)" ]; then
-      echo; echo \* Installing rsync with yum \*
-      yum install rsync -y
-    elif [ -n "$(command -v apt-get)" ]; then
-      echo; echo \* Installing rsync with apt-get \*
-      apt-get install rsync -y
-    else
-      echo; echo \* No known package manager found \*
-    fi
-
-    rsync -rtv --exclude='files' --exclude='.*' /vagrant/ /tmp/vagrant-deploy
-
-    if [[ `lsb_release -i` =~ (Ubuntu) ]]; then
-      sed -i s/^.*$/UTC/ /etc/timezone;
-    fi
-
-    cd /tmp/vagrant-deploy
-
-    ./build.sh
-  SHELL
+  config.vm.provision "shell", path: "ansible/install.sh"
 end
