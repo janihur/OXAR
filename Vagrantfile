@@ -86,4 +86,10 @@ Vagrant.configure(2) do |config|
   #   sudo apt-get install -y apache2
   # SHELL
   config.vm.provision "shell", path: "ansible/install.sh"
+  config.vm.provision "ansible_local" do |ansible|
+    ansible.install = false
+    ansible.version = "1.9.4"
+    ansible.provisioning_path = "/vagrant/ansible"
+    ansible.playbook = "oxar.yml"
+  end
 end
