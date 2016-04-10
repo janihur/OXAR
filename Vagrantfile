@@ -1,6 +1,8 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
+ANSIBLE_VERSION = "1.9.4"
+
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
 # configures the configuration version (we support older styles for
 # backwards compatibility). Please don't change it unless you know what
@@ -85,10 +87,10 @@ Vagrant.configure(2) do |config|
   #   sudo apt-get update
   #   sudo apt-get install -y apache2
   # SHELL
-  config.vm.provision "shell", path: "ansible/install.sh"
+  config.vm.provision "shell", path: "ansible/install.sh", args: ANSIBLE_VERSION
   config.vm.provision "ansible_local" do |ansible|
     ansible.install = false
-    ansible.version = "1.9.4"
+    ansible.version = ANSIBLE_VERSION
     ansible.provisioning_path = "/vagrant/ansible"
     ansible.playbook = "oxar.yml"
   end
