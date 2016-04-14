@@ -1,6 +1,88 @@
 ---
 - hosts: all
 
+  gather_facts: yes
+
+  vars:
+    oracle_http_port: 8081
+    oracle_listener_port: 1521
+    oracle_password: oracle
+
   tasks:
-    - name: ping
-      ping:
+
+    # TODO: not all of these are required ?
+    - name: os | packages
+      sudo: yes
+      yum: name={{ item }} state=present
+      with_items:
+        - bc
+        # - firewalld
+        - git
+        - htop
+        - java
+        - java-1.7.0-openjdk-src.x86_64
+        # - libaio
+        # - net-tools
+        - perl
+        - rlwrap
+        # - sudo
+        - unzip
+        # - which
+
+    #
+    # oracle xe requires minimum of 2GB swap
+    #
+    # being lazy here and simply creating the 2GB extra swap file if the swap
+    # is less than 2GB
+    #
+
+    - name: oracle xe | 2GB swap min | create swap file
+      sudo: yes
+      command: dd if=/dev/zero of=/mnt/2GB.swap bs=1M count=2048
+      when: ansible_swaptotal_mb < 2048
+
+    - name: oracle xe | 2GB swap min | format swap file
+      sudo: yes
+      command: mkswap /mnt/2GB.swap
+      when: ansible_swaptotal_mb < 2048
+
+    - name: oracle xe | 2GB swap min | set permissions
+      sudo: yes
+      file: path=/mnt/2GB.swap owner=root group=root mode=0600
+      when: ansible_swaptotal_mb < 2048
+
+    - name: oracle xe | 2GB swap min | turn on
+      sudo: yes
+      command: swapon /mnt/2GB.swap
+      when: ansible_swaptotal_mb < 2048
+
+    - name: oracle xe | 2GB swap min | fstab
+      sudo: yes
+      mount: name=none src=/mnt/2GB.swap fstype=swap opts=defaults passno=0 dump=0 state=present
+      when: ansible_swaptotal_mb < 2048
+
+    # TODO: not idempotent
+    - name: oracle xe | install | copy files
+      unarchive: src=files/oracle-xe-11.2.0-1.0.x86_64.rpm.zip dest=/tmp
+
+    - name: oracle xe | install | rpm
+      sudo: yes
+      yum: name=/tmp/Disk1/oracle-xe-11.2.0-1.0.x86_64.rpm state=present
+
+    # TODO: not idempotent
+    - name: oracle xe | install | response file
+      template: src=templates/xe.rsp.j2 dest=/tmp/Disk1/response/xe.rsp backup=yes
+
+    # TODO: not idempotent, will break on the 2nd run
+    - name: oracle xe | install | configure
+      sudo: yes
+      command: /etc/init.d/oracle-xe configure responseFile=/tmp/Disk1/response/xe.rsp
+
+    - name: oracle xe | install | profile file
+      sudo: yes
+      copy: src=files/20oos_oraclexe.sh dest=/etc/profile.d/ owner=root group=root mode=0644
+
+    # TODO: will always bounce, use handlers instead
+    - name: oracle xe | install | restart
+      sudo: yes
+      service: name=oracle-xe state=restarted

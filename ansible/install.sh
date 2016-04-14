@@ -7,5 +7,5 @@
 yum install -y epel-release
 # TODO: version hardcoded
 yum install -y ansible-${1}-1.el7
-# TODO: likely a wrong place but will do for now
-yum --exclude=ansible\* --exclude=kernel\* update -y
+# TODO: this is the wrong place, move to ansible playbook
+# yum --exclude=ansible\* --exclude=kernel\* update -y
