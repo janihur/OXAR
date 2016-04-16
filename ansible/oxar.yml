@@ -3,24 +3,32 @@
 
   gather_facts: yes
 
+  # things that can be configured
   vars:
     oracle_http_port: 8081
     oracle_listener_port: 1521
     oracle_password: oracle
 
+  handlers:
+
+    - name: restart oracle xe
+      sudo: yes
+      service: name=oracle-xe state=restarted
+
   tasks:
 
     # TODO: not all of these are required ?
+    # TODO: package names are distro specific
     - name: os | packages
       sudo: yes
       yum: name={{ item }} state=present
       with_items:
         - bc
         # - firewalld
-        - git
-        - htop
-        - java
-        - java-1.7.0-openjdk-src.x86_64
+        # - git
+        # - htop
+        # - java
+        # - java-1.7.0-openjdk-src.x86_64
         # - libaio
         # - net-tools
         - perl
@@ -61,28 +69,35 @@
       mount: name=none src=/mnt/2GB.swap fstype=swap opts=defaults passno=0 dump=0 state=present
       when: ansible_swaptotal_mb < 2048
 
-    # TODO: not idempotent
     - name: oracle xe | install | copy files
-      unarchive: src=files/oracle-xe-11.2.0-1.0.x86_64.rpm.zip dest=/tmp
+      unarchive: src=files/oracle-xe-11.2.0-1.0.x86_64.rpm.zip
+                 dest=/tmp
+                 creates=/tmp/Disk1/oracle-xe-11.2.0-1.0.x86_64.rpm
 
     - name: oracle xe | install | rpm
       sudo: yes
       yum: name=/tmp/Disk1/oracle-xe-11.2.0-1.0.x86_64.rpm state=present
 
-    # TODO: not idempotent
     - name: oracle xe | install | response file
-      template: src=templates/xe.rsp.j2 dest=/tmp/Disk1/response/xe.rsp backup=yes
+      template: src=templates/xe.rsp.j2
+                dest=/tmp/Disk1/response/xe.rsp
+                backup=yes
 
-    # TODO: not idempotent, will break on the 2nd run
+    - name: oracle xe | install | does configuration file exists (1/2)
+      stat: path=/etc/sysconfig/oracle-xe
+      register: ora_xe_config_sys
+
+    - name: oracle xe | install | does configuration file exists (2/2)
+      stat: path=/etc/default/oracle-xe
+      register: ora_xe_config_default
+
+    # TODO: use creates instead (but the created file can be different, see above)
     - name: oracle xe | install | configure
       sudo: yes
+      when: not (ora_xe_config_sys.stat.exists or ora_xe_config_default.stat.exists)
+      notify: restart oracle xe
       command: /etc/init.d/oracle-xe configure responseFile=/tmp/Disk1/response/xe.rsp
 
     - name: oracle xe | install | profile file
       sudo: yes
       copy: src=files/20oos_oraclexe.sh dest=/etc/profile.d/ owner=root group=root mode=0644
-
-    # TODO: will always bounce, use handlers instead
-    - name: oracle xe | install | restart
-      sudo: yes
-      service: name=oracle-xe state=restarted
