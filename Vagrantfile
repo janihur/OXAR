@@ -55,9 +55,9 @@ Vagrant.configure(2) do |config|
   # Example for VirtualBox:
   #
   config.vm.provider "virtualbox" do |vb|
-    vb.name = "oxar-1"
-    # Display the VirtualBox GUI when booting the machine
-    vb.gui = true
+    # vb.name = "oxar"
+    # # Display the VirtualBox GUI when booting the machine
+    # vb.gui = true
 
     # Customize the amount of memory on the VM:
     vb.cpus = "1"
@@ -95,6 +95,7 @@ Vagrant.configure(2) do |config|
     ansible.provisioning_path = "/vagrant/ansible"
     ansible.verbose = true
     ansible.sudo = true
+    # ansible.tags = ['oracle_xe_config']
     ansible.playbook = "oxar.yml"
   end
 end

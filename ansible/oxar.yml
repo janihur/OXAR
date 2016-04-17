@@ -4,10 +4,15 @@
   gather_facts: yes
 
   # things that can be configured
+  # TODO: some of these are optional and some are not
   vars:
-    oracle_http_port: 8081
-    oracle_listener_port: 1521
-    oracle_password: oracle
+    oracle_xe_http_port: 8081
+    oracle_xe_listener_port: 1521
+    oracle_xe_password: oracle
+    oracle_xe_user: oos_user
+    oracle_xe_user_password: oos_user
+    oracle_xe_acl_apex: yes
+    oracle_xe_hr_password: hr
 
   handlers:
 
@@ -15,6 +20,15 @@
       service: name=oracle-xe state=restarted
 
   tasks:
+
+    # an example only
+
+    - name: distribution info
+      debug: var={{ item }}
+      with_items:
+        - ansible_distribution
+        - ansible_distribution_release
+        - ansible_distribution_version
 
     # TODO: not all of these are required ?
     # TODO: package names are distro specific
@@ -35,6 +49,8 @@
         - unzip
         # - which
 
+    #
+    # swap
     #
     # oracle xe requires minimum of 2GB swap
     #
@@ -61,6 +77,10 @@
     - name: oracle xe | 2GB swap min | fstab
       mount: name=none src=/mnt/2GB.swap fstype=swap opts=defaults passno=0 dump=0 state=present
       when: ansible_swaptotal_mb < 2048
+
+    #
+    # oracle xe installation
+    #
 
     - name: oracle xe | install | copy files
       unarchive: src=files/oracle-xe-11.2.0-1.0.x86_64.rpm.zip
@@ -91,3 +111,98 @@
 
     - name: oracle xe | install | profile file
       copy: src=files/20oos_oraclexe.sh dest=/etc/profile.d/ owner=root group=root mode=0644
+
+    # TODO: split playbook here
+
+    - meta: flush_handlers
+
+    #
+    # oracle xe configuration
+    #
+
+    # TODO: consider templates instead ?
+
+    - name: oracle xe | configure | copy config files
+      tags:
+        - oracle_xe_config
+      copy: src={{ item }} dest=/tmp/
+      with_items:
+        - files/oracle_config.sql
+        - ../oracle/oracle_create_user.sql
+        - ../oracle/emp_dept.sql
+        - ../oracle/noop.sql
+        - ../oracle/apex_acl_all.sql
+        - files/unlock_sample_data.sql
+
+    - name: oracle xe | configure | run configuration | guard (pre)
+      tags:
+        - oracle_xe_config
+      stat: path=/tmp/.oracle_xe_configure_run
+      register: oracle_xe_configure_run_guard
+
+    - name: oracle xe | configure | run configuration
+      tags:
+        - oracle_xe_config
+      when: not oracle_xe_configure_run_guard.stat.exists
+      shell: . /u01/app/oracle/product/11.2.0/xe/bin/oracle_env.sh && sqlplus -L sys/{{ oracle_xe_password }} as sysdba @/tmp/oracle_config.sql
+
+    - name: oracle xe | configure | run configuration | guard (post)
+      tags:
+        - oracle_xe_config
+      when: not oracle_xe_configure_run_guard.stat.exists
+      file: path=/tmp/.oracle_xe_configure_run state=touch
+
+    - name: oracle xe | configure | create user | guard (pre)
+      tags:
+        - oracle_xe_config
+      stat: path=/tmp/.oracle_xe_create_user
+      register: oracle_xe_create_user_guard
+
+    - name: oracle xe | configure | create user
+      tags:
+        - oracle_xe_config
+      when: (not oracle_xe_create_user_guard.stat.exists) and oracle_xe_user is defined and oracle_xe_user and oracle_xe_user_password is defined and oracle_xe_user_password
+      shell: . /u01/app/oracle/product/11.2.0/xe/bin/oracle_env.sh && sqlplus -L sys/{{ oracle_xe_password }} as sysdba @/tmp/oracle_create_user.sql {{ oracle_xe_user }} {{ oracle_xe_user_password }} N
+
+    - name: oracle xe | configure | create user | guard (post)
+      tags:
+        - oracle_xe_config
+      when: not oracle_xe_create_user_guard.stat.exists
+      file: path=/tmp/.oracle_xe_create_user state=touch
+
+    - name: oracle xe | configure | set apex user acl | guard (pre)
+      tags:
+        - oracle_xe_config
+      when: oracle_xe_acl_apex
+      stat: path=/tmp/.oracle_xe_set_apex_user_acl
+      register: oracle_xe_set_apex_user_acl_guard
+
+    - name: oracle xe | configure | set apex user acl
+      tags:
+        - oracle_xe_config
+      when: (not oracle_xe_set_apex_user_acl_guard.stat.exists) and oracle_xe_acl_apex
+      shell: . /u01/app/oracle/product/11.2.0/xe/bin/oracle_env.sh && sqlplus -L sys/{{ oracle_xe_password }} as sysdba @/tmp/apex_acl_all.sql
+
+    - name: oracle xe | configure | set apex user acl | guard (post)
+      tags:
+        - oracle_xe_config
+      when: not oracle_xe_set_apex_user_acl_guard.stat.exists
+      file: path=/tmp/.oracle_xe_set_apex_user_acl state=touch
+
+    - name: oracle xe | configure | unlock sample data | guard (pre)
+      tags:
+        - oracle_xe_config
+      stat: path=/tmp/.oracle_xe_unlock_sample_data
+      register: oracle_xe_unlock_sample_data_guard
+
+    - name: oracle xe | configure | unlock sample data
+      tags:
+        - oracle_xe_config
+      when: (not oracle_xe_unlock_sample_data_guard.stat.exists) and oracle_xe_hr_password is defined and oracle_xe_hr_password
+      shell: . /u01/app/oracle/product/11.2.0/xe/bin/oracle_env.sh && sqlplus -L sys/{{ oracle_xe_password }} as sysdba @/tmp/unlock_sample_data.sql {{ oracle_xe_hr_password }}
+
+    - name: oracle xe | configure | unlock sample data | guard (post)
+      tags:
+        - oracle_xe_config
+      when: (not oracle_xe_unlock_sample_data_guard.stat.exists) and oracle_xe_hr_password is defined and oracle_xe_hr_password
+      file: path=/tmp/.oracle_xe_unlock_sample_data state=touch
