@@ -10,7 +10,7 @@ if (($? == 1))
 then
     yum install -y epel-release
     # TODO: version hardcoded
-    yum install -y ansible-${1}-1.el7
+    yum install -y ansible1.9-${1}.el7
     # TODO: this is the wrong place, move to ansible playbook
     # yum --exclude=ansible\* --exclude=kernel\* update -y
 fi
