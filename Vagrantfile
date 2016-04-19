@@ -1,7 +1,7 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-ANSIBLE_VERSION = "1.9.4-2"
+ANSIBLE_VERSION = "1.9.4"
 
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
 # configures the configuration version (we support older styles for
@@ -17,10 +17,8 @@ Vagrant.configure(2) do |config|
 
   # The following are a list of boxes that have been tested and known to build
   # successfully.:
-  #config.vm.box = "boxcutter/ol72"
   config.vm.box = "boxcutter/centos72"
-  #config.vm.box = "debian/jessie64"
-  #config.vm.box = "ubuntu/vivid64"
+  #config.vm.box = "boxcutter/ol72"
 
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
@@ -71,6 +69,7 @@ Vagrant.configure(2) do |config|
     end
   end
   #
+
   # View the documentation for the provider you are using for more
   # information on available options.
 

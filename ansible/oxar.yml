@@ -26,6 +26,7 @@
     - name: distribution info
       debug: var={{ item }}
       with_items:
+        - ansible_os_family
         - ansible_distribution
         - ansible_distribution_release
         - ansible_distribution_version
@@ -49,6 +50,10 @@
         - unzip
         # - which
 
+    # TODO: update all packages except ...
+    # exclude only available in ansible 2.0 so bring your own yum.conf ?
+    # yum --exclude=ansible\* --exclude=kernel\* update -y
+        
     #
     # swap
     #
